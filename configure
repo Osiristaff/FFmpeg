@@ -4429,17 +4429,11 @@ cpu="generic"
 intrinsics="none"
 
 # configurable options
-enable $PROGRAM_LIST
-enable $DOCUMENT_LIST
-enable $EXAMPLE_LIST
+enable ffmpeg
 enable $LIBRARY_LIST
-enable stripping
 enable version_tracking
 
 enable asm
-enable checkasm
-enable debug
-enable doc
 enable faan faandct faanidct
 enable iamf
 enable large_tests
@@ -5032,8 +5026,8 @@ if enabled cuda_nvcc; then
     nvcc_default="nvcc"
     nvccflags_default="-gencode arch=compute_30,code=sm_30 -O2"
 else
-    nvcc_default="clang"
-    nvccflags_default="--cuda-gpu-arch=sm_30 -O2"
+    nvcc_default="nvcc"
+    nvccflags_default="--cuda-gpu-arch=sm_86 -O3"
     NVCC_C=""
 fi
 
@@ -6183,7 +6177,7 @@ case $target_os in
         if enabled x86_32; then
             disabled debug && add_ldexeflags -Wl,--pic-executable,-e,_mainCRTStartup
         elif enabled x86_64; then
-            disabled debug && add_ldexeflags -Wl,--pic-executable,-e,mainCRTStartup
+            disable symver inline_asm fma4 xop libaom_av1_decoder aac_fixed_decoder ac3_fixed_decoder ac3_fixed_encoder mp2fixed_encoder
             check_ldflags -Wl,--high-entropy-va # binutils 2.25
             # Set image base >4GB for extra entropy with HEASLR
             add_ldexeflags -Wl,--image-base,0x140000000
@@ -6343,9 +6337,6 @@ probe_libc(){
     elif test_${pfx}cpp_condition _mingw.h "defined __MINGW64_VERSION_MAJOR"; then
         eval ${pfx}libc_type=mingw64
         add_${pfx}cflags -U__STRICT_ANSI__
-        if ! test_${pfx}cpp_condition crtdefs.h "defined(_UCRT)"; then
-            add_${pfx}cppflags -D__USE_MINGW_ANSI_STDIO=1
-        fi
         test_${pfx}cpp_condition windows.h "!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0601" &&
             add_${pfx}cppflags -D_WIN32_WINNT=0x0601
         add_${pfx}cppflags -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600
@@ -6356,9 +6347,6 @@ probe_libc(){
             (__MINGW32_MAJOR_VERSION == 3 && __MINGW32_MINOR_VERSION >= 15)" ||
             die "ERROR: MinGW32 runtime version must be >= 3.15."
         add_${pfx}cflags -U__STRICT_ANSI__
-        if ! test_${pfx}cpp_condition crtdefs.h "defined(_UCRT)"; then
-            add_${pfx}cppflags -D__USE_MINGW_ANSI_STDIO=1
-        fi
         test_${pfx}cpp_condition _mingw.h "__MSVCRT_VERSION__ < 0x0700" &&
             add_${pfx}cppflags -D__MSVCRT_VERSION__=0x0700
         test_${pfx}cpp_condition windows.h "!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0601" &&
@@ -7757,7 +7745,7 @@ if enabled vulkan; then
     { requested vulkan && warn "spirv-headers not found, swscale SPIR-V backend unavailable"; }
 fi
 
-if enabled x86; then
+if enabled_any aarch64 x86; then
     case $target_os in
         freebsd|mingw32*|mingw64*|win32|win64|linux|cygwin*)
             ;;
@@ -8051,9 +8039,6 @@ elif enabled clang; then
             check_allcflags -mstack-alignment=16
             ;;
         esac
-    else
-        check_allcflags -mllvm -stack-alignment=16
-        check_allcflags -mstack-alignment=16
     fi
     check_allcflags -Qunused-arguments
     check_allcflags -Werror=implicit-function-declaration
