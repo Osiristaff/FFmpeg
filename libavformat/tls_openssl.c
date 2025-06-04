@@ -699,11 +699,18 @@ static av_cold int openssl_init_ca_key_cert(URLContext *h)
         if (!SSL_CTX_load_verify_locations(c->ctx, s->ca_file, NULL))
             av_log(h, AV_LOG_ERROR, "SSL_CTX_load_verify_locations %s\n", openssl_get_error(c));
     } else {
+        #if defined(_WIN32) && (OPENSSL_VERSION_NUMBER >= 0x30200000L) /* OpenSSL 3.2 */
+        if (!SSL_CTX_load_verify_store(c->ctx, "org.openssl.winstore://")) {
+            av_log(h, AV_LOG_WARNING, "Failure setting default verify locations: %s\n",
+                openssl_get_error(c));
+        }
+        #else
         if (!SSL_CTX_set_default_verify_paths(c->ctx)) {
             // Only log the failure but do not error out, as this is not fatal
             av_log(h, AV_LOG_WARNING, "Failure setting default verify locations: %s\n",
                 openssl_get_error(c));
         }
+        #endif
     }
 
     if (s->cert_file) {
