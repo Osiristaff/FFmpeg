@@ -46,6 +46,20 @@ void ff_text_init_avio(void *s, FFTextReader *r, AVIOContext *pb)
             r->buf_pos += 3;
         }
     }
+    if (r->type != FF_UTF_8) {
+        // Check for double BOM in UTF-16 LE/BE files
+        for (i = 0; i < 2; i++)
+            r->buf[r->buf_len++] = avio_r8(r->pb);
+        if (strncmp("\xFF\xFE\xFF\xFE", r->buf, 4) == 0 ||
+            strncmp("\xFE\xFF\xFE\xFF", r->buf, 4) == 0) {
+            // We did find a second BOM, so move buf_pos two bytes ahead
+            r->buf_pos += 2;
+        } else {
+            // We did not find a second BOM, undo the seek
+            r->buf_len -= 2;
+            avio_seek(r->pb, -2, SEEK_CUR); // Seek back two bytes
+        }
+    }
     if (s && (r->type == FF_UTF16LE || r->type == FF_UTF16BE))
         av_log(s, AV_LOG_INFO,
                "UTF16 is automatically converted to UTF8, do not specify a character encoding\n");
@@ -219,9 +233,13 @@ void ff_subtitles_queue_finalize(void *log_ctx, FFDemuxSubtitlesQueue *q)
     qsort(q->subs, q->nb_subs, sizeof(*q->subs),
           q->sort == SUB_SORT_TS_POS ? cmp_pkt_sub_ts_pos
                                      : cmp_pkt_sub_pos_ts);
-    for (i = 0; i < q->nb_subs; i++)
-        if (q->subs[i]->duration < 0 && i < q->nb_subs - 1 && q->subs[i + 1]->pts - (uint64_t)q->subs[i]->pts <= INT64_MAX)
-            q->subs[i]->duration = q->subs[i + 1]->pts - q->subs[i]->pts;
+    if (!q->keep_negative_dur) {
+        for (i = 0; i < q->nb_subs; i++)
+            if (q->subs[i]->duration < 0 &&
+                i < q->nb_subs - 1 &&
+                q->subs[i + 1]->pts - (uint64_t)q->subs[i]->pts <= INT64_MAX)
+                q->subs[i]->duration = q->subs[i + 1]->pts - q->subs[i]->pts;
+    }
 
     if (!q->keep_duplicates)
         drop_dups(log_ctx, q);
