@@ -220,6 +220,7 @@ if ((y) < (x)) {\
 #define ff_sqrt ff_sqrt
 static inline av_const unsigned int ff_sqrt(unsigned int a)
 {
+/*
     unsigned int b;
 
     if (a < 255) return (ff_sqrt_tab[a + 1] - 1) >> 4;
@@ -236,6 +237,8 @@ static inline av_const unsigned int ff_sqrt(unsigned int a)
     }
 
     return b - (a < b * b);
+*/
+    return (unsigned int)__builtin_sqrtf((float)a);
 }
 #endif
 
