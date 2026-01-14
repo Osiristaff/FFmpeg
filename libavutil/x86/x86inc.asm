@@ -809,6 +809,10 @@ BRANCH_INSTR jz, je, jnz, jne, jl, jle, jnl, jnle, jg, jge, jng, jnge, ja, jae, 
 ; arch-independent part
 ;=============================================================================
 
+%ifndef ENABLE_DCE
+    %define ENABLE_DCE 1
+%endif
+
 %assign function_align 16
 
 ; Begin a function.
@@ -838,12 +842,19 @@ BRANCH_INSTR jz, je, jnz, jne, jl, jle, jnl, jnle, jg, jge, jng, jnge, ja, jae, 
     %xdefine current_function_section __SECT__
     %if FORMAT_ELF
         %if %1
+            %if ENABLE_DCE
+                section .text.%2 progbits alloc exec nowrite
+                %define last_branch_adr $$
+            %endif
             global %2:function hidden
         %else
             global %2:function
         %endif
     %elif FORMAT_MACHO && HAVE_PRIVATE_EXTERN && %1
         global %2:private_extern
+    %elif WIN64 && %1 && ENABLE_DCE
+        section .text$%2 comdat=1:%2
+        %define last_branch_adr $$
     %else
         global %2
     %endif
