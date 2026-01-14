@@ -303,7 +303,7 @@ cglobal vp9_i%1_i%2_%3_add, 4, 5, 0, dst, stride, c, eob, tx2
     add                eobd, %4
 %endif
     ; jump to the 1st txfm function unless it's located directly after this
-    times ((%%end - %%p1) >> 31) & 1 jmp %%p1
+    jmp %%p1
 ALIGN function_align
 %%end:
 %endif
