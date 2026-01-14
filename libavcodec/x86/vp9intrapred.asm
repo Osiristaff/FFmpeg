@@ -1808,9 +1808,7 @@ cglobal vp9_ipred_dc_32x32, 4, 4, 3, dst, stride, l, a
 
 cglobal vp9_ipred_dc_top_32x32, 0, 4, 3, dst, stride, l, a
     mov                     lq, amp
-%if ARCH_X86_32
     jmp mangle(private_prefix %+ _vp9_ipred_dc_left_32x32 %+ SUFFIX).main
-%endif
 
 %assign function_align 1
 cglobal vp9_ipred_dc_left_32x32, 0, 4, 3, dst, stride, l, a
