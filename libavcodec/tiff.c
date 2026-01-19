@@ -450,7 +450,7 @@ static int deinvert_buffer(TiffContext *s, const uint8_t *src, int size)
     if (!s->deinvert_buf)
         return AVERROR(ENOMEM);
     for (i = 0; i < size; i++)
-        s->deinvert_buf[i] = ff_reverse[src[i]];
+        s->deinvert_buf[i] = ff_reverse(src[i]);
 
     return 0;
 }
@@ -892,7 +892,7 @@ static int tiff_unpack_strip(TiffContext *s, AVFrame *p, uint8_t *dst, int strid
             } else {
                 int i;
                 for (i = 0; i < width; i++)
-                    dst[i] = ff_reverse[src[i]];
+                    dst[i] = ff_reverse(src[i]);
             }
 
             /* Color processing for DNG images with uncompressed strips (non-tiled) */
@@ -925,7 +925,7 @@ static int tiff_unpack_strip(TiffContext *s, AVFrame *p, uint8_t *dst, int strid
                     av_log(s->avctx, AV_LOG_ERROR, "Read went out of bounds\n");
                     return AVERROR_INVALIDDATA;
                 }
-                code = s->fill_order ? (int8_t) ff_reverse[*src++]: (int8_t) *src++;
+                code = s->fill_order ? (int8_t) ff_reverse(*src++): (int8_t) *src++;
                 if (code >= 0) {
                     code++;
                     if (pixels + code > width ||
@@ -954,7 +954,7 @@ static int tiff_unpack_strip(TiffContext *s, AVFrame *p, uint8_t *dst, int strid
             if (s->fill_order) {
                 int i;
                 for (i = 0; i < width; i++)
-                    dst[i] = ff_reverse[dst[i]];
+                    dst[i] = ff_reverse(dst[i]);
             }
             break;
         }

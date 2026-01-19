@@ -84,7 +84,7 @@ static av_cold void dsd_ctables_tableinit(void)
         }
         for (t = 0; t < CTABLES; ++t) {
             ctables_msbf[CTABLES - 1 - t][e] = acc[t];
-            ctables_lsbf[CTABLES - 1 - t][ff_reverse[e]] = acc[t];
+            ctables_lsbf[CTABLES - 1 - t][ff_reverse(e)] = acc[t];
         }
     }
 }
@@ -114,7 +114,7 @@ void ff_dsd2pcm_translate(DSDContext* s, size_t samples, int lsbf,
         src += src_stride;
 
         p = buf + ((pos - CTABLES) & FIFOMASK);
-        *p = ff_reverse[*p];
+        *p = ff_reverse(*p);
 
         sum = 0.0;
         for (i = 0; i < CTABLES; i++) {

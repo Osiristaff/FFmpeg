@@ -1966,8 +1966,8 @@ static int mpeg_decode_a53_cc(AVCodecContext *avctx,
                         field = (field == 2 ? 1 : 0);
                         if (!s1->slice.c.top_field_first) field = !field;
                         cap[0] = 0x04 | field;
-                        cap[1] = ff_reverse[cc1];
-                        cap[2] = ff_reverse[cc2];
+                        cap[1] = ff_reverse(cc1);
+                        cap[2] = ff_reverse(cc2);
                     }
                     cap += 3;
                 }

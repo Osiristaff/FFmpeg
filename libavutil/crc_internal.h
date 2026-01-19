@@ -22,20 +22,12 @@
 #include <stdint.h>
 #include "libavutil/reverse.h"
 
-static uint64_t reverse(uint64_t p, unsigned int deg)
+static inline uint64_t reverse(uint64_t p, unsigned int deg)
 {
-    uint64_t ret = 0;
-    int i;
-    for (i = 0; i < (deg / 8); i += 1) {
-        ret = (ret << 8) | (ff_reverse[p & 0xff]);
-        p >>= 8;
-    }
-    int rem = (deg + 1) - 8 * i;
-    ret = (ret << rem) | (ff_reverse[p & 0xff] >> (8 - rem));
-    return ret;
+    return __builtin_elementwise_bitreverse(p) >> (64 - deg);
 }
 
-static uint64_t xnmodp(unsigned n, uint64_t poly, unsigned deg, uint64_t *div, int bitreverse)
+static inline uint64_t xnmodp(unsigned n, uint64_t poly, unsigned deg, uint64_t *div, int bitreverse)
 {
     uint64_t mod, mask, high;
 

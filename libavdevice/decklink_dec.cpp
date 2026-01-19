@@ -295,7 +295,7 @@ static uint8_t* teletext_data_unit_from_op47_vbi_packet(int line, uint16_t *py, 
     tgt += 4;
 
     for (i = 0; i < 42; i++)
-       *tgt++ = ff_reverse[py[i] & 255];
+       *tgt++ = ff_reverse(py[i] & 255);
 
     return tgt;
 }

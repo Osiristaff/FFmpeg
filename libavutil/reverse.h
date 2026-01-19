@@ -23,6 +23,15 @@
 
 #include <stdint.h>
 
-extern const uint8_t ff_reverse[256];
+#if defined(__GFNI__) || defined(__aarch64__)
+static inline uint8_t ff_reverse(uint8_t x){
+    return __builtin_elementwise_bitreverse(x);
+}
+#else
+extern const uint8_t ff_reverse_table[256];
+static inline uint8_t ff_reverse(uint8_t x){
+    return ff_reverse_table[x];
+}
+#endif
 
 #endif /* AVUTIL_REVERSE_H */

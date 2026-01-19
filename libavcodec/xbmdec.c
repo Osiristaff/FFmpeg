@@ -117,7 +117,7 @@ static int xbm_decode_frame(AVCodecContext *avctx, AVFrame *p,
                     val = (val << 4) + nib;
                     ptr++;
                 }
-                *dst++ = ff_reverse[val];
+                *dst++ = ff_reverse(val);
                 if ((val = get_nibble(*ptr)) <= 15 && j+1 < linesize) {
                     j++;
                     ptr++;
@@ -125,7 +125,7 @@ static int xbm_decode_frame(AVCodecContext *avctx, AVFrame *p,
                         val = (val << 4) + nib;
                         ptr++;
                     }
-                    *dst++ = ff_reverse[val];
+                    *dst++ = ff_reverse(val);
                 }
             } else {
                 av_log(avctx, AV_LOG_ERROR,

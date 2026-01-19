@@ -106,13 +106,13 @@ static int s302m_encode2_frame(AVCodecContext *avctx, AVPacket *avpkt,
             uint8_t vucf = s->framing_index == 0 ? 0x10: 0;
 
             for (channels = 0; channels < nb_channels; channels += 2) {
-                o[0] = ff_reverse[(samples[0] & 0x0000FF00) >> 8];
-                o[1] = ff_reverse[(samples[0] & 0x00FF0000) >> 16];
-                o[2] = ff_reverse[(samples[0] & 0xFF000000) >> 24];
-                o[3] = ff_reverse[(samples[1] & 0x00000F00) >> 4] | vucf;
-                o[4] = ff_reverse[(samples[1] & 0x000FF000) >> 12];
-                o[5] = ff_reverse[(samples[1] & 0x0FF00000) >> 20];
-                o[6] = ff_reverse[(samples[1] & 0xF0000000) >> 28];
+                o[0] = ff_reverse((samples[0] & 0x0000FF00) >> 8);
+                o[1] = ff_reverse((samples[0] & 0x00FF0000) >> 16);
+                o[2] = ff_reverse((samples[0] & 0xFF000000) >> 24);
+                o[3] = ff_reverse((samples[1] & 0x00000F00) >> 4) | vucf;
+                o[4] = ff_reverse((samples[1] & 0x000FF000) >> 12);
+                o[5] = ff_reverse((samples[1] & 0x0FF00000) >> 20);
+                o[6] = ff_reverse((samples[1] & 0xF0000000) >> 28);
                 o += 7;
                 samples += 2;
             }
@@ -128,12 +128,12 @@ static int s302m_encode2_frame(AVCodecContext *avctx, AVPacket *avpkt,
             uint8_t vucf = s->framing_index == 0 ? 0x80: 0;
 
             for (channels = 0; channels < nb_channels; channels += 2) {
-                o[0] = ff_reverse[ (samples[0] & 0x000FF000) >> 12];
-                o[1] = ff_reverse[ (samples[0] & 0x0FF00000) >> 20];
-                o[2] = ff_reverse[((samples[0] & 0xF0000000) >> 28) | vucf];
-                o[3] = ff_reverse[ (samples[1] & 0x000FF000) >> 12];
-                o[4] = ff_reverse[ (samples[1] & 0x0FF00000) >> 20];
-                o[5] = ff_reverse[ (samples[1] & 0xF0000000) >> 28];
+                o[0] = ff_reverse( (samples[0] & 0x000FF000) >> 12);
+                o[1] = ff_reverse( (samples[0] & 0x0FF00000) >> 20);
+                o[2] = ff_reverse(((samples[0] & 0xF0000000) >> 28) | vucf);
+                o[3] = ff_reverse( (samples[1] & 0x000FF000) >> 12);
+                o[4] = ff_reverse( (samples[1] & 0x0FF00000) >> 20);
+                o[5] = ff_reverse( (samples[1] & 0xF0000000) >> 28);
                 o += 6;
                 samples += 2;
             }
@@ -149,11 +149,11 @@ static int s302m_encode2_frame(AVCodecContext *avctx, AVPacket *avpkt,
             uint8_t vucf = s->framing_index == 0 ? 0x10 : 0;
 
             for (channels = 0; channels < nb_channels; channels += 2) {
-                o[0] = ff_reverse[ samples[0] & 0xFF];
-                o[1] = ff_reverse[(samples[0] & 0xFF00) >>  8];
-                o[2] = ff_reverse[(samples[1] & 0x0F)   <<  4] | vucf;
-                o[3] = ff_reverse[(samples[1] & 0x0FF0) >>  4];
-                o[4] = ff_reverse[(samples[1] & 0xF000) >> 12];
+                o[0] = ff_reverse( samples[0] & 0xFF);
+                o[1] = ff_reverse((samples[0] & 0xFF00) >>  8);
+                o[2] = ff_reverse((samples[1] & 0x0F)   <<  4) | vucf;
+                o[3] = ff_reverse((samples[1] & 0x0FF0) >>  4);
+                o[4] = ff_reverse((samples[1] & 0xF000) >> 12);
                 o += 5;
                 samples += 2;
 

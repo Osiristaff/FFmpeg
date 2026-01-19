@@ -212,7 +212,7 @@ static av_always_inline void ac_get(ArithCoder *ac, GetBitContext *gb, int p, in
 
 static uint8_t prob_dst_x_bit(int c)
 {
-    return (ff_reverse[c & 127] >> 1) + 1;
+    return (ff_reverse(c & 127) >> 1) + 1;
 }
 
 static int build_filter(int16_t table[DST_MAX_ELEMENTS][16][256], const Table *fsets)
