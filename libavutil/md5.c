@@ -39,6 +39,53 @@
 #include "mem.h"
 #include "md5.h"
 
+#if CONFIG_OPENSSL
+#include <openssl/evp.h>
+
+typedef struct AVMD5 {
+    uint8_t digest_len;
+    EVP_MD_CTX *ctx;
+} AVMD5;
+
+const int av_md5_size = sizeof(AVMD5);
+
+__attribute__((always_inline)) struct AVMD5 *av_md5_alloc(void)
+{
+    return av_mallocz(sizeof(struct AVMD5));
+}
+
+__attribute__((always_inline)) void av_md5_init(AVMD5 *md5)
+{
+    if (!md5->ctx)
+        md5->ctx = EVP_MD_CTX_new();
+    else
+        EVP_MD_CTX_reset(md5->ctx);
+    EVP_DigestInit_ex(md5->ctx, EVP_md5(), NULL);
+    md5->digest_len = 16;
+}
+
+__attribute__((always_inline)) void av_md5_update(AVMD5 *md5, const uint8_t *data, size_t len)
+{
+    EVP_DigestUpdate(md5->ctx, data, len);
+}
+
+__attribute__((always_inline)) void av_md5_final(AVMD5 *md5, uint8_t *digest)
+{
+    unsigned int outlen = md5->digest_len;
+    EVP_DigestFinal_ex(md5->ctx, digest, &outlen);
+    EVP_MD_CTX_free(md5->ctx);
+}
+
+__attribute__((always_inline)) void av_md5_sum(uint8_t *dst, const uint8_t *src, size_t len)
+{
+    AVMD5 ctx = {0};
+    av_md5_init(&ctx);
+    av_md5_update(&ctx, src, len);
+    av_md5_final(&ctx, dst);
+}
+
+#else
+
 typedef struct AVMD5 {
     uint64_t len;
     uint8_t  block[64];
@@ -208,3 +255,5 @@ void av_md5_sum(uint8_t *dst, const uint8_t *src, size_t len)
     av_md5_update(&ctx, src, len);
     av_md5_final(&ctx, dst);
 }
+
+#endif
