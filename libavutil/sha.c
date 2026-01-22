@@ -31,6 +31,63 @@
 #include "intreadwrite.h"
 #include "mem.h"
 
+#if CONFIG_OPENSSL
+#include <openssl/evp.h>
+
+typedef enum {
+    AV_SHA1,
+    AV_SHA224,
+    AV_SHA256,
+    AV_SHA384,
+} AVSHAAlg;
+
+typedef struct AVSHA {
+    AVSHAAlg alg;
+    uint8_t digest_len;
+    EVP_MD_CTX *ctx;
+} AVSHA;
+
+const int av_sha_size = sizeof(AVSHA);
+
+__attribute__((always_inline)) AVSHA *av_sha_alloc(void)
+{
+    return av_mallocz(sizeof(struct AVSHA));
+}
+
+__attribute__((always_inline)) int av_sha_init(AVSHA *sha, int bits)
+{
+    const EVP_MD *md = NULL;
+
+    if (!sha->ctx)
+        sha->ctx = EVP_MD_CTX_new();
+    else
+        EVP_MD_CTX_reset(sha->ctx);
+
+    switch (bits) {
+    case 160: sha->alg = AV_SHA1;   sha->digest_len = 5;  md = EVP_sha1(); break;
+    case 224: sha->alg = AV_SHA224; sha->digest_len = 7;  md = EVP_sha224(); break;
+    case 256: sha->alg = AV_SHA256; sha->digest_len = 8;  md = EVP_sha256(); break;
+    case 384: sha->alg = AV_SHA384; sha->digest_len = 12; md = EVP_sha384(); break;
+    default:  return AVERROR(EINVAL);
+    }
+
+    return EVP_DigestInit_ex(sha->ctx, md, NULL) ? 0 : -1;
+}
+
+__attribute__((always_inline)) void av_sha_update(AVSHA *sha, const uint8_t *data, size_t len)
+{
+    EVP_DigestUpdate(sha->ctx, data, len);
+}
+
+__attribute__((always_inline)) void av_sha_final(AVSHA *sha, uint8_t *digest)
+{
+    unsigned int outlen = sha->digest_len * 4;
+    EVP_DigestFinal_ex(sha->ctx, digest, &outlen);
+    EVP_MD_CTX_free(sha->ctx);
+}
+
+#else
+
 /** hash context */
 typedef struct AVSHA {
     uint8_t  digest_len;  ///< digest length in 32-bit words
@@ -356,3 +413,4 @@ void av_sha_final(AVSHA* ctx, uint8_t *digest)
     for (i = 0; i < ctx->digest_len; i++)
         AV_WB32(digest + i*4, ctx->state[i]);
 }
+#endif
