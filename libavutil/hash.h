@@ -122,7 +122,7 @@ struct AVHashContext;
  * @note The context is not initialized after a call to this function; you must
  * call av_hash_init() to do so.
  */
-int av_hash_alloc(struct AVHashContext **ctx, const char *name);
+__attribute__((always_inline)) int av_hash_alloc(struct AVHashContext **ctx, const char *name);
 
 /**
  * Get the names of available hash algorithms.
@@ -171,7 +171,7 @@ int av_hash_get_size(const struct AVHashContext *ctx);
  *
  * @param[in,out] ctx Hash context
  */
-void av_hash_init(struct AVHashContext *ctx);
+__attribute__((always_inline)) void av_hash_init(struct AVHashContext *ctx);
 
 /**
  * Update a hash context with additional data.
@@ -180,7 +180,7 @@ void av_hash_init(struct AVHashContext *ctx);
  * @param[in]     src Data to be added to the hash context
  * @param[in]     len Size of the additional data
  */
-void av_hash_update(struct AVHashContext *ctx, const uint8_t *src, size_t len);
+__attribute__((always_inline)) void av_hash_update(struct AVHashContext *ctx, const uint8_t *src, size_t len);
 
 /**
  * Finalize a hash context and compute the actual hash value.
@@ -196,7 +196,7 @@ void av_hash_update(struct AVHashContext *ctx, const uint8_t *src, size_t len);
  *
  * @see av_hash_final_bin() provides an alternative API
  */
-void av_hash_final(struct AVHashContext *ctx, uint8_t *dst);
+__attribute__((always_inline)) void av_hash_final(struct AVHashContext *ctx, uint8_t *dst);
 
 /**
  * Finalize a hash context and store the actual hash value in a buffer.
