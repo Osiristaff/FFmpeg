@@ -16,6 +16,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
+#include "libavutil/aarch64/cpu.h"
 #include "libavutil/cpu.h"
 #include "libavutil/cpu_internal.h"
 #include "config.h"
@@ -151,46 +152,91 @@ static int detect_flags(void)
 static int detect_flags(void)
 {
     int flags = 0;
+
+#ifdef __ARM_FEATURE_DOTPROD
+    flags |= AV_CPU_FLAG_DOTPROD;
+#endif
+#ifdef __ARM_FEATURE_MATMUL_INT8
+    flags |= AV_CPU_FLAG_I8MM;
+#endif
+#ifdef __ARM_FEATURE_SVE
+    flags |= AV_CPU_FLAG_SVE;
+#endif
+#ifdef __ARM_FEATURE_SVE2
+    flags |= AV_CPU_FLAG_SVE2;
+#endif
+#ifdef __ARM_FEATURE_SME
+    flags |= AV_CPU_FLAG_SME;
+#endif
+#ifdef __ARM_FEATURE_CRC32
+    flags |= AV_CPU_FLAG_ARM_CRC;
+#endif
+#ifdef __ARM_FEATURE_AES
+    flags |= AV_CPU_FLAG_PMULL;
+#endif
+#ifdef __ARM_FEATURE_SHA3
+    flags |= AV_CPU_FLAG_EOR3;
+#endif
+#ifdef __ARM_FEATURE_SME_I16I64
+    flags |= AV_CPU_FLAG_SME_I16I64;
+#endif
+#ifdef __ARM_FEATURE_SME2
+    flags |= AV_CPU_FLAG_SME2;
+#endif
+
+    if (!(flags & AV_CPU_FLAG_ARM_CRC))
 #ifdef PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_ARM_CRC;
+        if (IsProcessorFeaturePresent(PF_ARM_V8_CRC32_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_ARM_CRC;
 #endif
+    if (!(flags & AV_CPU_FLAG_PMULL))
 #ifdef PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_PMULL;
+        if (IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_PMULL;
 #endif
+    if (!(flags & AV_CPU_FLAG_EOR3))
 #ifdef PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_EOR3;
+        if (IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_EOR3;
 #endif
+    if (!(flags & AV_CPU_FLAG_DOTPROD))
 #ifdef PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_DOTPROD;
+        if (IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_DOTPROD;
 #endif
+    if (!(flags & AV_CPU_FLAG_I8MM))
 #ifdef PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_I8MM;
+        if (IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_I8MM;
 #endif
+    if (!(flags & AV_CPU_FLAG_SVE))
 #ifdef PF_ARM_SVE_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_SVE;
+        if (IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_SVE;
 #endif
+    if (!(flags & AV_CPU_FLAG_SVE2))
 #ifdef PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_SVE2;
+        if (IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_SVE2;
 #endif
+    /*
+    if (!(flags & AV_CPU_FLAG_SME))
 #ifdef PF_ARM_SME_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SME_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_SME;
+        if (IsProcessorFeaturePresent(PF_ARM_SME_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_SME;
 #endif
+    if (!(flags & AV_CPU_FLAG_SME_I16I64))
 #ifdef PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_SME_I16I64;
+        if (IsProcessorFeaturePresent(PF_ARM_SME_I16I64_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_SME_I16I64;
 #endif
+    if (!(flags & AV_CPU_FLAG_SME2))
 #ifdef PF_ARM_SME2_INSTRUCTIONS_AVAILABLE
-    if (IsProcessorFeaturePresent(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE))
-        flags |= AV_CPU_FLAG_SME2;
+        if (IsProcessorFeaturePresent(PF_ARM_SME2_INSTRUCTIONS_AVAILABLE))
+            flags |= AV_CPU_FLAG_SME2;
 #endif
+    */
+
     return flags;
 }
 #else
@@ -247,7 +293,7 @@ size_t ff_get_cpu_max_align_aarch64(void)
 {
     int flags = av_get_cpu_flags();
 
-    if (flags & AV_CPU_FLAG_NEON)
+    if (have_neon(flags))
         return 16;
 
     return 8;

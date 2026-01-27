@@ -416,7 +416,7 @@ int ff_tx_decompose_length(int dst[TX_MAX_DECOMPOSITIONS], enum AVTXType type,
     FFTXLenDecomp ld[TX_MAX_DECOMPOSITIONS];
     int codelet_list_idx = codelet_list_num;
 
-    const int cpu_flags = av_get_cpu_flags();
+    const int cpu_flags = av_get_cpu_flags_static();
 
     /* Loop through all codelets in all codelet lists to find matches
      * to the requirements */
@@ -725,7 +725,7 @@ av_cold int ff_tx_init_subtx(AVTXContext *s, enum AVTXType type,
 
     /* We still accept functions marked with SLOW, even if the CPU is
      * marked with the same flag, but we give them lower priority. */
-    const int cpu_flags = av_get_cpu_flags();
+    const int cpu_flags = av_get_cpu_flags_static();
 
     /* Flags the transform wants */
     uint64_t req_flags = flags;

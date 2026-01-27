@@ -119,13 +119,107 @@
  * before. So av_get_cpu_flags() can easily be used in an application to
  * detect the enabled cpu flags.
  */
-int av_get_cpu_flags(void);
+__attribute__((pure)) int av_get_cpu_flags_real(void);
+static inline int av_get_cpu_flags_static(void){
+    int cap = 0;
+    #if defined(__x86_64__)
+        cap |= AV_CPU_FLAG_SSE2|AV_CPU_FLAG_CMOV|AV_CPU_FLAG_MMX;
+        #ifdef __SSE3__
+            cap |= AV_CPU_FLAG_SSE3;
+        #endif
+        #ifdef __SSSE3__
+            cap |= AV_CPU_FLAG_SSSE3;
+        #endif
+        #ifdef __SSE4_1__
+            cap |= AV_CPU_FLAG_SSE4;
+        #endif
+        #ifdef __SSE4_2__
+            cap |= AV_CPU_FLAG_SSE42;
+        #endif
+        #ifdef __PCLMUL__
+            cap |= AV_CPU_FLAG_CLMUL;
+        #endif
+        #ifdef __AES__
+            cap |= AV_CPU_FLAG_AESNI;
+        #endif
+        #ifdef __AVX__
+            cap |= AV_CPU_FLAG_AVX;
+        #endif
+        #ifdef __FMA__
+            cap |= AV_CPU_FLAG_FMA3;
+        #endif
+        #ifdef __AVX2__
+            cap |= AV_CPU_FLAG_AVX2;
+        #endif
+        #ifdef __AVX512F__
+            cap |= AV_CPU_FLAG_AVX512;
+        #endif
+        #ifdef __AVX512VBMI2__
+            cap |= AV_CPU_FLAG_AVX512ICL;
+        #endif
+        #ifdef __BMI__
+            cap |= AV_CPU_FLAG_BMI1;
+        #endif
+        #ifdef __BMI2__
+            cap |= AV_CPU_FLAG_BMI2;
+        #endif
+    #elif defined(__aarch64__)
+        cap |= AV_CPU_FLAG_ARMV8|AV_CPU_FLAG_NEON;
+        #ifdef __ARM_FEATURE_DOTPROD
+            cap |= AV_CPU_FLAG_DOTPROD;
+        #endif
+        #ifdef __ARM_FEATURE_MATMUL_INT8
+            cap |= AV_CPU_FLAG_I8MM;
+        #endif
+        #ifdef __ARM_FEATURE_SVE
+            cap |= AV_CPU_FLAG_SVE;
+        #endif
+        #ifdef __ARM_FEATURE_SVE2
+            cap |= AV_CPU_FLAG_SVE2;
+        #endif
+        #ifdef __ARM_FEATURE_SME
+            cap |= AV_CPU_FLAG_SME;
+        #endif
+        #ifdef __ARM_FEATURE_CRC32
+            cap |= AV_CPU_FLAG_ARM_CRC;
+        #endif
+        #ifdef __ARM_FEATURE_AES
+            cap |= AV_CPU_FLAG_PMULL;
+        #endif
+        #ifdef __ARM_FEATURE_SHA3
+            cap |= AV_CPU_FLAG_EOR3;
+        #endif
+        #ifdef __ARM_FEATURE_SME_I16I64
+            cap |= AV_CPU_FLAG_SME_I16I64;
+        #endif
+        #ifdef __ARM_FEATURE_SME2
+            cap |= AV_CPU_FLAG_SME2;
+        #endif
+    #endif
+    return cap;
+}
+static inline int av_get_cpu_flags(void){
+    int cap = av_get_cpu_flags_static();
+    #if defined(__x86_64__)
+        if (!(cap & AV_CPU_FLAG_AVX512ICL)){
+            cap |= av_get_cpu_flags_real();
+            cap &= ~(AV_CPU_FLAG_MMXEXT | AV_CPU_FLAG_SSE | AV_CPU_FLAG_XOP | AV_CPU_FLAG_FMA4 | AV_CPU_FLAG_3DNOW | AV_CPU_FLAG_3DNOWEXT | AV_CPU_FLAG_SSE2SLOW | AV_CPU_FLAG_SSE3SLOW | AV_CPU_FLAG_ATOM | AV_CPU_FLAG_SSSE3SLOW | AV_CPU_FLAG_AVXSLOW | AV_CPU_FLAG_SLOW_GATHER);
+        }
+    #elif defined(__aarch64__)
+        if (!(cap & AV_CPU_FLAG_SVE2)){
+            cap |= av_get_cpu_flags_real();
+        }
+    #else
+        cap |= av_get_cpu_flags_real();
+    #endif
+    return cap;
+}
 
 /**
  * Disables cpu detection and forces the specified flags.
  * -1 is a special case that disables forcing of specific flags.
  */
-void av_force_cpu_flags(int flags);
+static inline void av_force_cpu_flags(int flags){};
 
 /**
  * Parse CPU caps from a string and update the given AV_CPU_* flags based on that.
@@ -154,6 +248,6 @@ void av_cpu_force_count(int count);
  *  av_set_cpu_flags_mask(), then this function will behave as if AVX is not
  *  present.
  */
-size_t av_cpu_max_align(void);
+__attribute__((always_inline)) size_t av_cpu_max_align(void);
 
 #endif /* AVUTIL_CPU_H */
