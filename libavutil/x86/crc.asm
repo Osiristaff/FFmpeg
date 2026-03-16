@@ -56,7 +56,11 @@ SECTION .text
 ; %1 LE ; %2 128 bit fold reg ; %3 pre-computed constant reg ; %4 tmp reg
 %if %1 == 1
     pxor      %4, %4
+    %if mmsize == 64
+    vmovss    %4, %2, %4
+    %else
     pblendw   %4, %2, 0xfc
+    %endif
     mova      %2, %4
     pclmulqdq %4, %3, 0x00
     pxor      %4, %2
@@ -75,11 +79,17 @@ SECTION .text
 
 %macro FOLD_SINGLE 4
 ; %1 temp ; %2 fold reg ; %3 pre-computed constants ; %4 input data block
+%if mmsize == 64
+    pclmulqdq  %1, %2, %3, 0x01
+    pclmulqdq  %2, %2, %3, 0x10
+    vpternlogq %2, %1, %4, 0x96
+%else
     mova      %1, %2
     pclmulqdq %1, %3, 0x01
     pxor      %1, %4
     pclmulqdq %2, %3, 0x10
     pxor      %2, %1
+%endif
 %endmacro
 
 %macro XMM_SHIFT_LEFT 4
@@ -137,16 +147,33 @@ SECTION .text
     ; fall through, %6 label is expected to be next instruction
 %endmacro
 
+%macro VBROADCASTI32x4 3
+; %1 dst reg ; %2 address for AVX512ICL ; %3 address for SSE4.2
+    %if mmsize == 64
+        vbroadcasti32x4 %1, [%2]
+    %else
+        movu            %1, [%3]
+    %endif
+%endmacro
+
 %macro CRC 1
 %define CTX r0+4
 ;-----------------------------------------------------------------------------------------------
 ; ff_crc[_le]_clmul(const uint8_t *ctx, uint32_t crc, const uint8_t *buffer, size_t length
 ;-----------------------------------------------------------------------------------------------
 ; %1 == 1 - LE format
-%if %1 == 1
-cglobal crc_le, 4, 6, 6+4*ARCH_X86_64, 0x10
+%if mmsize == 64
+    %if %1 == 1
+    cglobal crc_le, 4, 6, 6+4*ARCH_X86_64, 0
+    %else
+    cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0
+    %endif
 %else
-cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0x10
+    %if %1 == 1
+    cglobal crc_le, 4, 6, 6+4*ARCH_X86_64, 0x10
+    %else
+    cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0x10
+    %endif
 %endif
 
 %if ARCH_X86_32
@@ -154,37 +181,41 @@ cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0x10
 %endif
 
 %if %1 == 0
-    mova  m10, [reverse_shuffle]
+    VBROADCASTI32x4 m10, reverse_shuffle, reverse_shuffle
 %endif
 
-    movd   m4, r1d
+%if mmsize == 64
+    pxor    m4, m4
+%endif
+    movd   xm4, r1d
+
 %if ARCH_X86_32
     ; skip 4x unrolled loop due to only 8 XMM reg being available in X86_32
-    jmp   .less_than_64bytes
+    jmp            .less_than_4x_mmsize
 %else
-    cmp    r3, 64
-    jb    .less_than_64bytes
-    movu   m1, [r2 +  0]
-    movu   m3, [r2 + 16]
-    movu   m2, [r2 + 32]
-    movu   m0, [r2 + 48]
-    pxor   m1, m4
+    cmp             r3, 4 * mmsize
+    jb             .less_than_4x_mmsize
+    movu            m1, [r2 + 0 * mmsize]
+    movu            m3, [r2 + 1 * mmsize]
+    movu            m2, [r2 + 2 * mmsize]
+    movu            m0, [r2 + 3 * mmsize]
+    pxor            m1, m4
 %if %1 == 0
-    pshufb m0, m10
-    pshufb m1, m10
-    pshufb m2, m10
-    pshufb m3, m10
+    pshufb          m0, m10
+    pshufb          m1, m10
+    pshufb          m2, m10
+    pshufb          m3, m10
 %endif
-    mov    r4, 64
-    cmp    r3, 128
-    jb    .reduce_4x_to_1
-    movu   m4, [CTX]
+    mov             r4, 4 * mmsize
+    cmp             r3, 8 * mmsize
+    jb             .reduce_4x_to_1
+    VBROADCASTI32x4 m4, CTX + 64, CTX
 
 .fold_4x_loop:
-        movu        m6, [r2 + r4 +  0]
-        movu        m7, [r2 + r4 + 16]
-        movu        m8, [r2 + r4 + 32]
-        movu        m9, [r2 + r4 + 48]
+        movu        m6, [r2 + r4 + 0 * mmsize]
+        movu        m7, [r2 + r4 + 1 * mmsize]
+        movu        m8, [r2 + r4 + 2 * mmsize]
+        movu        m9, [r2 + r4 + 3 * mmsize]
 %if %1 == 0
         pshufb      m6, m10
         pshufb      m7, m10
@@ -195,22 +226,26 @@ cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0x10
         FOLD_SINGLE m5, m3, m4, m7
         FOLD_SINGLE m5, m2, m4, m8
         FOLD_SINGLE m5, m0, m4, m9
-        add         r4, 64
-        lea         r5, [r4 + 64]
+        add         r4, 4 * mmsize
+        lea         r5, [r4 + 4 * mmsize]
         cmp         r5, r3
         jbe        .fold_4x_loop
 
 .reduce_4x_to_1:
-    movu        m4, [CTX + 16]
-    FOLD_SINGLE m5, m1, m4, m3
-    FOLD_SINGLE m5, m1, m4, m2
-    FOLD_SINGLE m5, m1, m4, m0
+    VBROADCASTI32x4 m4, CTX, CTX + 16
+    FOLD_SINGLE     m5,  m1, m4, m3
+    FOLD_SINGLE     m5,  m1, m4, m2
+    FOLD_SINGLE     m5,  m1, m4, m0
 %endif
 
 .fold_1x_pre:
-    lea  r5, [r4 + 16]
+    lea  r5, [r4 + mmsize]
     cmp  r5, r3
+%if mmsize == 64
+    ja  .fold_zmm_to_xmm
+%else
     ja  .partial_block
+%endif
 
 .fold_1x_loop:
         movu        m2, [r2 + r4]
@@ -218,81 +253,141 @@ cglobal crc,    4, 6, 7+4*ARCH_X86_64, 0x10
         pshufb      m2, m10
 %endif
         FOLD_SINGLE m5, m1, m4, m2
-        add         r4, 16
-        lea         r5, [r4 + 16]
+        add         r4, mmsize
+        lea         r5, [r4 + mmsize]
         cmp         r5, r3
         jbe        .fold_1x_loop
 
+%if mmsize == 64
+.fold_zmm_to_xmm:
+    movu            xm4, [CTX + 16]
+    vextracti32x4   xm0,  m1, 1
+    vextracti32x4   xm2,  m1, 2
+    vextracti32x4   xm3,  m1, 3
+    FOLD_SINGLE     xm5, xm1, xm4, xm0
+    FOLD_SINGLE     xm5, xm1, xm4, xm2
+    FOLD_SINGLE     xm5, xm1, xm4, xm3
+
+.fold_16b_pre:
+    lea r5, [r4 + 16]
+    cmp r5, r3
+    ja .partial_block
+
+.fold_16b_loop:
+        movu        xm2, [r2 + r4]
+%if %1 == 0
+        pshufb      xm2, xm10
+%endif
+        FOLD_SINGLE xm5, xm1, xm4, xm2
+        add          r4, 16
+        lea          r5, [r4 + 16]
+        cmp          r5, r3
+        jbe         .fold_16b_loop
+%endif
+
 .partial_block:
-    cmp         r4, r3
-    jae        .reduce_128_to_64
-    movu        m2, [r2 + r3 - 16]
-    and         r3, 0xf
-    lea         r4, [partial_bytes_shuf_tab]
-    movu        m0, [r3 + r4]
+    cmp             r4, r3
+    jae           .reduce_128_to_64
+    movu           xm2, [r2 + r3 - 16]
+    and             r3, 0xf
+    lea             r4, [partial_bytes_shuf_tab]
+    movu           xm0, [r3 + r4]
 %if %1 == 0
-    pshufb      m1, m10
+    pshufb         xm1, xm10
 %endif
-    mova        m3, m1
-    pcmpeqd     m5, m5 ; m5 = _mm_set1_epi8(0xff)
-    pxor        m5, m0
-    pshufb      m3, m5
-    pblendvb    m2, m3, m0
-    pshufb      m1, m0
+    mova           xm3, xm1
+%if mmsize == 64
+    mova           xm5, xm0
+    vpternlogq     xm5, xm0, xm0, 0xf ; xm5 = ~xm0
+    vpmovb2m        k1, xm0
+    pshufb         xm3, xm5
+    vpblendmb  xm2{k1}, xm2, xm3
+%else
+    pcmpeqd        xm5, xm5 ; m5 = _mm_set1_epi8(0xff)
+    pxor           xm5, xm0
+    pshufb         xm3, xm5
+    pblendvb       xm2, xm3, xm0
+%endif
+    pshufb         xm1, xm0
 %if %1 == 0
-    pshufb      m1, m10
-    pshufb      m2, m10
+    pshufb         xm1, xm10
+    pshufb         xm2, xm10
 %endif
-    FOLD_SINGLE m5, m1, m4, m2
+    FOLD_SINGLE    xm5, xm1, xm4, xm2
 
 .reduce_128_to_64:
-    movu           m4, [CTX + 32]
-    FOLD_128_TO_64 %1, m1, m4, m5
+    movu           xm4, [CTX + 32]
+    FOLD_128_TO_64  %1, xm1, xm4, xm5
 .reduce_64_to_32:
-    movu           m4, [CTX + 48]
-    FOLD_64_TO_32  %1, m1, m4, m5
+    movu           xm4, [CTX + 48]
+    FOLD_64_TO_32   %1, xm1, xm4, xm5
     RET
 
-.less_than_64bytes:
-    cmp    r3, 16
-    jb    .less_than_16bytes
-    movu   m1, [r2]
-    pxor   m1, m4
+.less_than_4x_mmsize:
+    cmp             r3, mmsize
+    jb             .less_than_mmsize
+    movu            m1, [r2]
+    pxor            m1, m4
 %if %1 == 0
-    pshufb m1, m10
+    pshufb          m1, m10
 %endif
-    mov    r4, 16
-    movu   m4, [CTX + 16]
-    jmp   .fold_1x_pre
+    mov             r4, mmsize
+    VBROADCASTI32x4 m4, CTX, CTX + 16
+    jmp            .fold_1x_pre
+
+.less_than_mmsize:
+%if mmsize == 64
+    cmp     r3, 16
+    jb    .less_than_16bytes
+    movu   xm1, [r2]
+    pxor   xm1, xm4
+%if %1 == 0
+    pshufb xm1, xm10
+%endif
+    mov     r4, 16
+    movu   xm4, [CTX + 16]
+    jmp   .fold_16b_pre
 
 .less_than_16bytes:
-    pxor           m1, m1
-    movu        [rsp], m1
-    MEMCPY_0_15   rsp, r2, r3, r1, r4, .memcpy_done
+    mov                  r4d, -1
+    shlx                 r4d, r4d, r3d
+    not                  r4d
+    kmovw                 k1, r4d
+    vmovdqu8      xm1{k1}{z}, [r2]
+%else
+    pxor                  m1, m1
+    movu               [rsp], m1
+    MEMCPY_0_15          rsp, r2, r3, r1, r4, .memcpy_done
 
 .memcpy_done:
-    movu           m1, [rsp]
-    pxor           m1, m4
-    cmp            r3, 5
-    jb            .less_than_5bytes
-    XMM_SHIFT_LEFT m1, (16 - r3), m2, r4
-%if %1 == 0
-    pshufb         m1, m10
+    movu                  m1, [rsp]
 %endif
-    jmp           .reduce_128_to_64
+
+    pxor                 xm1, xm4
+    cmp                   r3, 5
+    jb                  .less_than_5bytes
+    XMM_SHIFT_LEFT       xm1, (16 - r3), xm2, r4
+%if %1 == 0
+    pshufb               xm1, xm10
+%endif
+    jmp                 .reduce_128_to_64
 
 .less_than_5bytes:
 %if %1 == 0
-    XMM_SHIFT_LEFT m1, (4 - r3), m2, r4
-    movq          m10, [reverse_shuffle + 8] ; 0x0001020304050607
-    pshufb         m1, m10
+    XMM_SHIFT_LEFT       xm1, (4 - r3), xm2, r4
+    movq                xm10, [reverse_shuffle + 8] ; 0x0001020304050607
+    pshufb               xm1, xm10
 %else
-    XMM_SHIFT_LEFT m1, (8 - r3), m2, r4
+    XMM_SHIFT_LEFT       xm1, (8 - r3), xm2, r4
 %endif
-    jmp .reduce_64_to_32
+    jmp                 .reduce_64_to_32
 
 %endmacro
 
 INIT_XMM clmul
+CRC 0
+CRC 1
+
+INIT_ZMM avx512icl
 CRC 0
 CRC 1
