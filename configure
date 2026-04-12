@@ -4446,16 +4446,11 @@ cpu="generic"
 intrinsics="none"
 
 # configurable options
-enable $PROGRAM_LIST
-enable $DOCUMENT_LIST
-enable $EXAMPLE_LIST
+enable ffmpeg
 enable $LIBRARY_LIST
-enable stripping
 enable version_tracking
 
 enable asm
-enable debug
-enable doc
 enable faan faandct faanidct
 enable iamf
 enable large_tests
@@ -4466,8 +4461,7 @@ enable runtime_cpudetect
 enable safe_bitstream_reader
 enable static
 enable swscale_alpha
-enable unstable
-enable valgrind_backtrace
+disable inline_asm symver
 
 sws_max_filter_size_default=256
 set_default sws_max_filter_size
@@ -5043,8 +5037,9 @@ if enabled cuda_nvcc; then
     nvcc_default="nvcc"
     nvccflags_default="-gencode arch=compute_30,code=sm_30 -O2"
 else
-    nvcc_default="clang"
-    nvccflags_default="--cuda-gpu-arch=sm_30 -O2"
+    add_extralibs -lc++
+    nvcc_default="nvcc"
+    nvccflags_default="--cuda-gpu-arch=sm_86 -O3"
     NVCC_C=""
 fi
 
@@ -6248,7 +6243,6 @@ case $target_os in
         if enabled x86_32; then
             disabled debug && add_ldexeflags -Wl,--pic-executable,-e,_mainCRTStartup
         elif enabled x86_64; then
-            disabled debug && add_ldexeflags -Wl,--pic-executable,-e,mainCRTStartup
             check_ldflags -Wl,--high-entropy-va # binutils 2.25
             # Set image base >4GB for extra entropy with HEASLR
             add_ldexeflags -Wl,--image-base,0x140000000
@@ -6416,9 +6410,6 @@ probe_libc(){
             add_allcflags "-include $source_path/compat/msvcrt/snprintf.h"
         fi
         add_${pfx}cflags -U__STRICT_ANSI__
-        if ! test_${pfx}cpp_condition crtdefs.h "defined(_UCRT)"; then
-            add_${pfx}cppflags -D__USE_MINGW_ANSI_STDIO=1
-        fi
         test_${pfx}cpp_condition windows.h "!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0600" &&
             add_${pfx}cppflags -D_WIN32_WINNT=0x0600
         add_${pfx}cppflags -D_POSIX_C_SOURCE=200112 -D_XOPEN_SOURCE=600
@@ -6429,9 +6420,6 @@ probe_libc(){
             (__MINGW32_MAJOR_VERSION == 3 && __MINGW32_MINOR_VERSION >= 15)" ||
             die "ERROR: MinGW32 runtime version must be >= 3.15."
         add_${pfx}cflags -U__STRICT_ANSI__
-        if ! test_${pfx}cpp_condition crtdefs.h "defined(_UCRT)"; then
-            add_${pfx}cppflags -D__USE_MINGW_ANSI_STDIO=1
-        fi
         test_${pfx}cpp_condition _mingw.h "__MSVCRT_VERSION__ < 0x0700" &&
             add_${pfx}cppflags -D__MSVCRT_VERSION__=0x0700
         test_${pfx}cpp_condition windows.h "!defined(_WIN32_WINNT) || _WIN32_WINNT < 0x0600" &&
@@ -7872,7 +7860,7 @@ if enabled vulkan; then
     { requested vulkan && warn "spirv-headers not found, swscale SPIR-V backend unavailable"; }
 fi
 
-if enabled x86; then
+if enabled_any aarch64 x86; then
     case $target_os in
         freebsd|mingw32*|mingw64*|win32|win64|linux|cygwin*)
             ;;
@@ -8178,8 +8166,7 @@ elif enabled clang; then
             ;;
         esac
     else
-        check_allcflags -mllvm -stack-alignment=16
-        check_allcflags -mstack-alignment=16
+        disable xop fma4 libaom_av1_decoder aac_fixed_decoder ac3_fixed_decoder ac3_fixed_encoder mp2_fixed_encoder
     fi
     check_allcflags -Qunused-arguments
     check_allcflags -Werror=implicit-function-declaration
