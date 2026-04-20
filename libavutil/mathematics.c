@@ -34,6 +34,7 @@
 
 /* Stein's binary GCD algorithm:
  * https://en.wikipedia.org/wiki/Binary_GCD_algorithm */
+ /*
 int64_t av_gcd(int64_t a, int64_t b) {
     int za, zb, k;
     int64_t u, v;
@@ -54,6 +55,7 @@ int64_t av_gcd(int64_t a, int64_t b) {
     }
     return (uint64_t)u << k;
 }
+*/
 
 int64_t av_rescale_rnd(int64_t a, int64_t b, int64_t c, enum AVRounding rnd)
 {

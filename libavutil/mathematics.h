@@ -167,7 +167,29 @@ enum AVRounding {
  * @return GCD of a and b up to sign; if a >= 0 and b >= 0, return value is >= 0;
  * if a == 0 and b == 0, returns 0.
  */
-int64_t av_const av_gcd(int64_t a, int64_t b);
+static inline int64_t av_gcd(int64_t u, int64_t v) {
+    __builtin_assume(u >= 0 && v >= 0);
+    int64_t uv = u | v;
+    if (__builtin_unpredictable(u == 0 | v == 0 | u == v)) {
+        return uv;
+    } else {
+        uint8_t vz = __builtin_ctzll(v);
+        u >>= __builtin_ctzll(u);
+        do {
+            v >>= vz;
+            int64_t diff = v - u;
+            if (diff == 0) {
+                break;
+            }
+            vz = __builtin_ctzll(diff);
+            if (v < u) {
+                u = v;
+            }
+            v = diff < 0 ? -diff : diff;
+        } while (1);
+        return u << __builtin_ctzll(uv);
+    }
+}
 
 /**
  * Rescale a 64-bit integer with rounding to nearest.
