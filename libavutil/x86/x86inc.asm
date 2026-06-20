@@ -371,7 +371,7 @@ DECLARE_REG_TMP_SIZE 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
 %endmacro
 
 %define required_stack_alignment ((mmsize + 15) & ~15)
-%define vzeroupper_required (mmsize > 16 && (ARCH_X86_64 == 0 || xmm_regs_used > 16 || notcpuflag(avx512)))
+%define vzeroupper_required 0
 %define high_mm_regs (16*cpuflag(avx512))
 
 ; Large stack allocations on Windows need to use stack probing in order
