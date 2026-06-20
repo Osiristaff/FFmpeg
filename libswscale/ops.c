@@ -41,14 +41,14 @@ extern const SwsOpBackend backend_spirv;
 
 const SwsOpBackend * const ff_sws_op_backends[] = {
     &backend_murder,
-#if ARCH_AARCH64 && HAVE_NEON
+#if ARCH_AARCH64 && HAVE_NEON && 0
     &backend_aarch64,
-#elif ARCH_X86_64 && HAVE_X86ASM
+#elif ARCH_X86_64 && HAVE_X86ASM && 0
     &backend_x86,
 #endif
     &backend_c,
 #if HAVE_SPIRV_HEADERS_SPIRV_H || HAVE_SPIRV_UNIFIED1_SPIRV_H
-    &backend_spirv,
+    //&backend_spirv,
 #endif
     NULL
 };

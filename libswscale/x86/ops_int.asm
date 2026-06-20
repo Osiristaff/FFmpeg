@@ -539,10 +539,10 @@ IF1 X,  cast %+ BITS %+ to %+ BITS_TO mx, mx2, xmx, xmx2
 IF1 Y,  cast %+ BITS %+ to %+ BITS_TO my, my2, xmy, xmy2
 IF1 Z,  cast %+ BITS %+ to %+ BITS_TO mz, mz2, xmz, xmz2
 IF1 W,  cast %+ BITS %+ to %+ BITS_TO mw, mw2, xmw, xmw2
-    %if cpuflag(avx2) && (BITS > BITS_TO && !V2 || BITS >= BITS_TO * 4)
+    ;%if cpuflag(avx2) && (BITS > BITS_TO && !V2 || BITS >= BITS_TO * 4)
         ; clear upper bits after reducing the register size
-        vzeroupper ; TMP
-    %endif
+    ;    vzeroupper ; TMP
+    ;%endif
 %endif
 %ifidn UOP, SWS_UOP_TO_F32
 IF X,   vcvtdq2ps mx, mx

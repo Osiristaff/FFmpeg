@@ -257,7 +257,7 @@ cglobal dct32_float, 2,3,8, out, in, tmp
     vperm2f128  m0, m1, m1, 0x31
     vmovaps [outq+96], m1
 
-    vzeroupper
+    ;vzeroupper
 
     ;    pass 6, no SIMD...
 INIT_XMM avx
