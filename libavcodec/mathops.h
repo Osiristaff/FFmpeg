@@ -213,7 +213,10 @@ if ((y) < (x)) {\
 #endif
 
 #ifndef FASTDIV
-#   define FASTDIV(a,b) ((uint32_t)((((uint64_t)a) * ff_inverse[b]) >> 32))
+#   define FASTDIV(a,b) ff_fastdiv
+static inline av_const unsigned int ff_fastdiv(unsigned int a, unsigned int b){
+    return (float)a / (float)b;
+}
 #endif /* FASTDIV */
 
 #ifndef ff_sqrt
